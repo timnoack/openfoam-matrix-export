@@ -6,11 +6,11 @@ This library registers the `matrixExporter` solver in OpenFOAM. When the solver 
 ```bash
 git clone git@github.com:timnoack/openfoam-matrix-export.git
 ```
-2. Build the library using `wmake libso`:
+2. Build the library. The shared library is automatically copied into the `$FOAM_USER_LIBBIN` folder.
 ```bash
 wmake libso path/to/openfoam-matrix-export
 ```
-3. Add the library to the `system/controlDict` of your case:
+3. Load the library to your solver application by specifying it in your `system/controlDict`:
 ```cpp
 libs ("libMatrixExporter");
 ```
