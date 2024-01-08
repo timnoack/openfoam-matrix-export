@@ -1,5 +1,6 @@
 #include <fstream>
 
+#include "error.H"
 #include "fast_matrix_market/app/doublet.hpp"
 #include "fast_matrix_market/fast_matrix_market.hpp"
 #include "fast_matrix_market/types.hpp"
@@ -33,6 +34,7 @@ void Foam::matrixExporter::readControls() {
   fileNamex_ = controlDict_.getOrDefault<fileName>("initialFieldFile", "x.mtx");
   comment_ =
       controlDict_.getOrDefault<string>("comment", "No description provided");
+  exitAfterExport_ = controlDict_.getOrDefault<bool>("exitAfterExport", true);
 }
 
 void Foam::matrixExporter::exportMatrix() const {
@@ -148,6 +150,11 @@ Foam::solverPerformance Foam::matrixExporter::solve(
   exportField(psi_s, fileNamex_);
 
   Info << "Export-solver finished for field " << fieldName_ << endl;
+
+  if (exitAfterExport_) {
+    error e("Exiting after matrix export");
+    e.exit(0);
+  }
 
   return solverPerf;
 }

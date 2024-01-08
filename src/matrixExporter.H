@@ -13,6 +13,7 @@ class matrixExporter : public lduMatrix::solver {
   fileName fileNameb_;
   fileName fileNamex_;
   string comment_;
+  bool exitAfterExport_;
 
  protected:
   // Protected Data
