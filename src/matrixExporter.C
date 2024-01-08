@@ -2,7 +2,6 @@
 
 #include "error.H"
 #include "fast_matrix_market/fast_matrix_market.hpp"
-#include "fast_matrix_market/types.hpp"
 #include "matrixExporter.H"
 
 namespace Foam {

@@ -1,6 +1,8 @@
 EXE_INC = \
 -I$(LIB_SRC)/finiteVolume/lnInclude \
 -Ilibs/fast_matrix_market/include \
+-Ilibs/fast_matrix_market/dependencies/dragonbox/include \
+-DFMM_USE_DRAGONBOX \
 -std=c++17 \
 -Wno-old-style-cast
 
