@@ -1,7 +1,6 @@
 #include <fstream>
 
 #include "error.H"
-#include "fast_matrix_market/app/doublet.hpp"
 #include "fast_matrix_market/fast_matrix_market.hpp"
 #include "fast_matrix_market/types.hpp"
 #include "matrixExporter.H"
@@ -80,7 +79,11 @@ void Foam::matrixExporter::exportMatrix() const {
       addCoeffs(row, neighbourCell, coeff);
     }
 
-    // Add upper coefficients of this row
+    // Add upper coefficients of this row if matrix is not symmetric
+    // If the matrix is symmetric, the matrix is marked as symmetric in the
+    // matrix market header and the upper coefficients MUST NOT be added
+    if (matrix_.symmetric()) continue;
+
     label losortStart = matrix_.lduAddr().losortStartAddr()[row];
     label losortEnd = matrix_.lduAddr().losortStartAddr()[row + 1];
     for (label i = losortStart; i < losortEnd; ++i) {
@@ -112,20 +115,13 @@ void Foam::matrixExporter::exportField(const scalarField &field,
   header.comment = comment_;
   header.nrows = numRows;
   header.ncols = 1;
-  header.format = fast_matrix_market::coordinate;
+  header.format = fast_matrix_market::array;
   header.field = fast_matrix_market::real;
-  header.symmetry = fast_matrix_market::general;
 
-  std::vector<label> rows;
   std::vector<scalar> values;
-
-  rows.reserve(numRows);
   values.reserve(numRows);
 
-  forAll(field, row) {
-    rows.push_back(row);
-    values.push_back(field[row]);
-  }
+  forAll(field, row) { values.push_back(field[row]); }
 
   std::ofstream os(fileName.c_str());
 
@@ -134,7 +130,7 @@ void Foam::matrixExporter::exportField(const scalarField &field,
         << "Cannot open file " << fileName << endl;
   }
 
-  fast_matrix_market::write_matrix_market_doublet(os, header, rows, values);
+  fast_matrix_market::write_matrix_market_array(os, header, values);
   os.close();
 }
 
@@ -144,6 +140,18 @@ Foam::solverPerformance Foam::matrixExporter::solve(
 
   Info << "Export-solver invoked for field " << fieldName_ << endl;
 
+  if (UPstream::parRun()) {
+    FatalErrorIn("matrixExporter::solve()")
+        << "Parallel run not supported. Run the solver application with mpirun."
+        << endl;
+  }
+
+  if (!interfaces_.empty()) {
+    // Interfaces should only exist in parallel runs, but lets make sure anyway
+    FatalErrorIn("matrixExporter::solve()")
+        << "Interfaces not supported" << endl;
+  }
+
   // Export matrix, source and initial field
   exportMatrix();
   exportField(source, fileNameb_);
@@ -152,7 +160,9 @@ Foam::solverPerformance Foam::matrixExporter::solve(
   Info << "Export-solver finished for field " << fieldName_ << endl;
 
   if (exitAfterExport_) {
-    error e("Exiting after matrix export");
+    error e(
+        "Exiting after successfull matrix export. To disable this, set "
+        "exitAfterExport to no in the solver settings.");
     e.exit(0);
   }
 
