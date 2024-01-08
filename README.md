@@ -2,9 +2,9 @@
 This library registers the `matrixExporter` solver in OpenFOAM. When the solver is invoked, it will export the matrix it is supposed to solve to a file in the Matrix Market format.
 
 ## Usage
-1. Clone the library to any folder. You may clone it into the `$WM_PROJECT_USER_DIR` folder, but you can use any other folder as well.
+1. Clone the library to any folder. You may clone it into the `$WM_PROJECT_USER_DIR` folder, but you can use any other folder as well. Dont forget to clone the submodules as well (`--recursive`) as the library depends on the [fast_matrix_market](https://github.com/alugowski/fast_matrix_market.git).
 ```bash
-git clone git@github.com:timnoack/openfoam-matrix-export.git
+git clone --recursive git@github.com:timnoack/openfoam-matrix-export.git
 ```
 2. Build the library. The shared library is automatically copied into the `$FOAM_USER_LIBBIN` folder.
 ```bash
