@@ -1,0 +1,7 @@
+# Build artifacts
+/lnInclude
+/Make/**/
+
+# Files for clangd
+/.cache
+compile_commands.json

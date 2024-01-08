@@ -1,0 +1,3 @@
+[submodule "libs/fast_matrix_market"]
+	path = libs/fast_matrix_market
+	url = https://github.com/alugowski/fast_matrix_market.git
