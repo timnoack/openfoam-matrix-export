@@ -11,11 +11,11 @@ git clone git@github.com:timnoack/openfoam-matrix-export.git
 wmake libso path/to/openfoam-matrix-export
 ```
 3. Add the library to the `system/controlDict` of your case:
-```bash
+```cpp
 libs ("libMatrixExporter");
 ```
 4. Use the `matrixExporter` solver in your `system/fvSolution` file:
-```bash
+```cpp
 solvers
 {
     T // the name of your field
