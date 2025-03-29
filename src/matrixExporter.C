@@ -141,7 +141,7 @@ Foam::solverPerformance Foam::matrixExporter::solve(
 
   if (UPstream::parRun()) {
     FatalErrorIn("matrixExporter::solve()")
-        << "Parallel run not supported. Run the solver application with mpirun."
+        << "Parallel run not supported. Run the non-decomposed case on a single core."
         << endl;
   }
 
