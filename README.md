@@ -86,6 +86,15 @@ The exporter can optionally solve the matrix after exporting it:
 - If a solver is configured, it will default to continuing the simulation (`exitAfterExport = no`)
 - You can override this behavior by explicitly setting `exitAfterExport`
 
+⚠️ **CRITICAL WARNING**: If you set `exitAfterExport = no` without providing a `solverConfig`, the simulation will continue with an unsolved matrix. This means:
+
+- The field values will remain at their initial values
+- These incorrect values will be used in calculations for other fields
+- Physics coupling between fields will be broken
+- In iterative algorithms (SIMPLE, PIMPLE), convergence will be impossible
+- Final results will be physically meaningless
+- The simulation may appear to run normally, but ALL RESULTS WILL BE INCORRECT
+
 ## Examples
 
 ### Basic Export (No Solving)
@@ -124,7 +133,7 @@ solvers
         solver          matrixExporter;
         directory       "./matrixExport/";
         comment         "Pressure equation from cavity case";
-        exitAfterExport no;
+        // exitAfterExport defaults to no when a solver is configured
         
         solverConfig
         {
