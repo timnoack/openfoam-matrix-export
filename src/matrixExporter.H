@@ -1,51 +1,46 @@
 #ifndef Foam_matrixExport_exportSolver_H
 #define Foam_matrixExport_exportSolver_H
-
 #include "lduMatrix.H"
-
-// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+#include "runTimeSelectionTables.H"
 
 namespace Foam {
 
 class matrixExporter : public lduMatrix::solver {
- private:
-  fileName fileNameA_;
-  fileName fileNameb_;
-  fileName fileNamex_;
-  string comment_;
-  bool exitAfterExport_;
+private:
+    fileName destDir_;
+    string comment_;
+    bool exitAfterExport_;
+    autoPtr<lduMatrix::solver> actualSolver_;
 
- protected:
-  // Protected Data
-  //- Read the control parameters from the controlDict_
-  virtual void readControls();
+protected:
+    //- Read the control parameters from the controlDict_
+    virtual void readControls();
 
-  void exportMatrix() const;
-  void exportField(const scalarField &field, fileName fileName) const;
+    fileName getPathTo(word type) const;
 
- public:
-  //- Runtime type information
-  TypeName("matrixExporter");
+    void exportMatrix() const;
+    void exportField(const scalarField &field, word type) const;
 
-  // Constructors
+public:
+    //- Runtime type information
+    TypeName("matrixExporter");
 
-  //- Construct from matrix components and solver controls
-  matrixExporter(const word &fieldName, const lduMatrix &matrix,
-                 const FieldField<Field, scalar> &interfaceBouCoeffs,
-                 const FieldField<Field, scalar> &interfaceIntCoeffs,
-                 const lduInterfaceFieldPtrsList &interfaces,
-                 const dictionary &solverControls);
+    // Constructors
+    //- Construct from matrix components and solver controls
+    matrixExporter(const word &fieldName, const lduMatrix &matrix,
+                  const FieldField<Field, scalar> &interfaceBouCoeffs,
+                  const FieldField<Field, scalar> &interfaceIntCoeffs,
+                  const lduInterfaceFieldPtrsList &interfaces,
+                  const dictionary &solverControls);
 
-  //- Destructor
-  virtual ~matrixExporter() = default;
+    //- Destructor
+    virtual ~matrixExporter() = default;
 
-  // Member Functions
-
-  //- Solve the matrix with this solver
-  virtual solverPerformance solve(scalarField &psi, const scalarField &source,
-                                  const direction cmpt = 0) const;
+    // Member Functions
+    //- Solve the matrix with this solver
+    virtual solverPerformance solve(scalarField &psi, const scalarField &source,
+                                   const direction cmpt = 0) const;
 };
 
-}  // namespace Foam
-
+} // namespace Foam
 #endif

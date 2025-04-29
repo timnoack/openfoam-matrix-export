@@ -1,5 +1,7 @@
 #include <fstream>
 
+#include "Time.H"
+#include "dictionary.H"
 #include "error.H"
 #include "fast_matrix_market/fast_matrix_market.hpp"
 #include "matrixExporter.H"
@@ -21,22 +23,45 @@ Foam::matrixExporter::matrixExporter(
     const lduInterfaceFieldPtrsList &interfaces,
     const dictionary &solverControls)
     : lduMatrix::solver(fieldName, matrix, interfaceBouCoeffs,
-                        interfaceIntCoeffs, interfaces, solverControls) {
+                        interfaceIntCoeffs, interfaces, solverControls),
+      actualSolver_(nullptr) {
   readControls();
 }
 
 void Foam::matrixExporter::readControls() {
   lduMatrix::solver::readControls();
-  fileNameA_ = controlDict_.getOrDefault<fileName>("matrixFile", "A.mtx");
-  fileNameb_ = controlDict_.getOrDefault<fileName>("sourceFile", "b.mtx");
-  fileNamex_ = controlDict_.getOrDefault<fileName>("initialFieldFile", "x.mtx");
+  destDir_ =
+      controlDict_.getOrDefault<fileName>("directory", "./matrixExport/");
   comment_ =
       controlDict_.getOrDefault<string>("comment", "No description provided");
-  exitAfterExport_ = controlDict_.getOrDefault<bool>("exitAfterExport", true);
+
+  if (dictionary *solverConfig = controlDict_.findDict("solverConfig")) {
+    actualSolver_ =
+        lduMatrix::solver::New(fieldName_, matrix_, interfaceBouCoeffs_,
+                               interfaceIntCoeffs_, interfaces_, *solverConfig);
+    Info << "Export-Solver uses actual solver " << actualSolver_->type()
+         << endl;
+  }
+
+  // Exit after export by default if no actual solver is provided
+  exitAfterExport_ = controlDict_.getOrDefault<bool>("exitAfterExport",
+                                                     actualSolver_ == nullptr);
+}
+
+Foam::fileName Foam::matrixExporter::getPathTo(word type) const {
+  const Time &time = matrix_.mesh().thisDb().time();
+  word timeName = time.timeName();
+
+  fileName currentDir = destDir_ / timeName;
+
+  if (!exists(currentDir)) mkDir(currentDir);
+
+  return currentDir / fieldName_ + "_" + type + ".mtx";
 }
 
 void Foam::matrixExporter::exportMatrix() const {
-  Info << "Exporting matrix to file " << fileNameA_ << endl;
+  fileName outputFileA = getPathTo("matrix");
+  Info << "Exporting matrix to file " << outputFileA << endl;
 
   label numRows = matrix_.lduAddr().size();
   label numFaces = matrix_.lduAddr().lowerAddr().size();
@@ -93,11 +118,11 @@ void Foam::matrixExporter::exportMatrix() const {
     }
   }
 
-  std::ofstream os(fileNameA_.c_str());
+  std::ofstream os(outputFileA.c_str());
 
   if (!os) {
     FatalErrorIn("matrixExporter::exportMatrix()")
-        << "Cannot open file " << fileNameA_ << endl;
+        << "Cannot open file " << outputFileA << endl;
   }
 
   fast_matrix_market::write_matrix_market_triplet(os, header, rows, cols,
@@ -106,8 +131,9 @@ void Foam::matrixExporter::exportMatrix() const {
 }
 
 void Foam::matrixExporter::exportField(const scalarField &field,
-                                       fileName fileName) const {
-  Info << "Exporting field to file " << fileName << endl;
+                                       word type) const {
+  fileName outputFileName = getPathTo(type);
+  Info << "Exporting field to file " << outputFileName << endl;
   label numRows = matrix_.lduAddr().size();
 
   fast_matrix_market::matrix_market_header header;
@@ -122,11 +148,11 @@ void Foam::matrixExporter::exportField(const scalarField &field,
 
   forAll(field, row) { values.push_back(field[row]); }
 
-  std::ofstream os(fileName.c_str());
+  std::ofstream os(outputFileName.c_str());
 
   if (!os) {
     FatalErrorIn("matrixExporter::field()")
-        << "Cannot open file " << fileName << endl;
+        << "Cannot open file " << outputFileName << endl;
   }
 
   fast_matrix_market::write_matrix_market_array(os, header, values);
@@ -141,7 +167,8 @@ Foam::solverPerformance Foam::matrixExporter::solve(
 
   if (UPstream::parRun()) {
     FatalErrorIn("matrixExporter::solve()")
-        << "Parallel run not supported. Run the non-decomposed case on a single core."
+        << "Parallel run not supported. Run the non-decomposed case on a "
+           "single core."
         << endl;
   }
 
@@ -153,14 +180,26 @@ Foam::solverPerformance Foam::matrixExporter::solve(
 
   // Export matrix, source and initial field
   exportMatrix();
-  exportField(source, fileNameb_);
-  exportField(psi_s, fileNamex_);
+  exportField(source, "source");
+  exportField(psi_s, "psi_initial");
 
   Info << "Export-solver finished for field " << fieldName_ << endl;
 
+  // If actualSolver is available, use the configured solver to solve the matrix
+  if (actualSolver_) {
+    Info << "Solving matrix for field " << fieldName_ << " using solver "
+         << actualSolver_->type() << endl;
+
+    // Solve the matrix
+    solverPerf = actualSolver_->solve(psi_s, source, cmpt);
+
+    // Export the solution field
+    exportField(psi_s, "psi_solution.mtx");
+  }
+
   if (exitAfterExport_) {
     error e(
-        "Exiting after successfull matrix export. To disable this, set "
+        "Exiting after successful matrix export. To disable this, set "
         "exitAfterExport to no in the solver settings.");
     e.exit(0);
   }
