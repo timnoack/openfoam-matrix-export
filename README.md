@@ -28,9 +28,8 @@ solvers
         solver          matrixExporter;
         directory       "./matrixExport/"; // Base directory for exported files
         comment         "Please provide a short description of the testcase and its matrix here."; // Optional comment
-        exitAfterExport yes; // Set to no if you want to continue execution after export
         
-        // Optional: Add a solver configuration to actually solve the matrix
+        // Optional but highly recommended: Add a solver configuration to actually solve the matrix
         solverConfig
         {
             solver          PCG;
